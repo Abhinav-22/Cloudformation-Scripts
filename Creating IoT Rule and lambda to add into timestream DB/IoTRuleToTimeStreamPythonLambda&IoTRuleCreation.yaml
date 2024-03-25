@@ -1,0 +1,70 @@
+
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  RegionOfTimesStreamDb:
+    Type: String
+    AllowedValues:
+      - us-east-1
+      - us-east-2
+      - us-west-2
+    Description: Environment variable RegionOfTimeStreamDb to be set. 
+  
+  RoleARN:
+    Type: String
+    Description: The ARN of the role which give necessary permissions.
+
+  S3BucketName:
+    Type: String
+    Description: S3 bucket name in which lambda function is defined.
+  
+  S3Key:
+    Type: String
+    Description: Path to the file in which lambda function is defined.
+
+
+Resources:
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: IotRuleToTimeStreamInPython
+      Role: !Ref RoleARN
+      Runtime: python3.12
+      MemorySize: 512
+      Timeout: 300
+      Environment:
+        Variables:
+          REGION: !Ref RegionOfTimesStreamDb
+      Handler: PythonLambda.IoTRuleToTimeStreamPythonLambda.lambda_handler
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref S3Key
+
+  LambdaInvocationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      SourceArn:
+        !Join [
+          "",
+          [
+            "arn:aws:iot:",
+            !Ref "AWS::Region",
+            ":",
+            !Ref "AWS::AccountId",
+            ":rule/",
+            !Ref "IoTRuleCreate",
+          ],
+        ]
+      Action: lambda:InvokeFunction
+      Principal: iot.amazonaws.com
+      FunctionName: !GetAtt LambdaFunction.Arn
+      SourceAccount: !Ref AWS::AccountId
+
+  IoTRuleCreate:
+    Type: AWS::IoT::TopicRule
+    Properties:
+      RuleName: FromRuleToTimeStreamInPython
+      TopicRulePayload:
+        Actions:
+          - Lambda:
+              FunctionArn: !GetAtt LambdaFunction.Arn
+        Sql: SELECT * FROM 'topic/subtopic'

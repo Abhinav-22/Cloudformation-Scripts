@@ -1,0 +1,16 @@
+
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  DatabaseCreation:
+    Type: AWS::Timestream::Database
+    Properties:
+      DatabaseName: SampleDB
+  TableCreation:
+    Type: AWS::Timestream::Table
+    DependsOn: DatabaseCreation
+    Properties:
+      TableName: SampleTable
+      DatabaseName: "SampleDB"
+      RetentionProperties:
+        MemoryStoreRetentionPeriodInHours: "720"
+        MagneticStoreRetentionPeriodInDays: "3650"

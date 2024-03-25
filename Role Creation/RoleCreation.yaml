@@ -1,0 +1,64 @@
+
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
+      Policies:
+        - PolicyName: S3_CloudWatch_Permission
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:PutLogEvents"
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                Resource: "arn:aws:logs:*:*:*"
+
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                Resource: "arn:aws:s3:::*/*"
+        - PolicyName: timestream_policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "timestream:*"
+                  - "kms:DescribeKey"
+                  - "kms:CreateGrant"
+                  - "kms:Decrypt"
+                  - "dbqms:CreateFavoriteQuery"
+                  - "dbqms:DescribeFavoriteQueries"
+                  - "dbqms:UpdateFavoriteQuery"
+                  - "dbqms:DeleteFavoriteQueries"
+                  - "dbqms:GetQueryString"
+                  - "dbqms:CreateQueryHistory"
+                  - "dbqms:UpdateQueryHistory"
+                  - "dbqms:DeleteQueryHistory"
+                  - "dbqms:DescribeQueryHistory"
+                  - "s3:ListAllMyBuckets"
+                Resource: "*"
+        - PolicyName: KMSDecrypt
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: "kms:Decrypt"
+                Resource: "*"
+      RoleName: roleExample

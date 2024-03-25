@@ -1,0 +1,52 @@
+
+
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  Region:
+    Type: String
+    AllowedValues:
+      - us-east-1
+      - us-east-2
+      - us-west-2
+    Description: Environment variable REGION to be set.
+
+  RoleARN:
+    Type: String
+
+  S3BucketName:
+    Type: String
+    Description: S3 bucket name in which lambda function is defined.
+
+  S3Key:
+    Type: String
+    Description: Path to the file in which lambda function is defined.
+
+  SqsARN:
+    Type: String
+    Description: ARN of the SQS queue created.
+
+Resources:
+  LambdaTrigger:
+    Type: AWS::Lambda::EventSourceMapping
+    DependsOn: LambdaFunction
+    Properties:
+      BatchSize: 10
+      MaximumBatchingWindowInSeconds: 10
+      EventSourceArn: !Ref SqsARN
+      FunctionName: SqsToTimeStream
+
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: SqsToTimeStream
+      Role: !Ref RoleARN
+      Runtime: python3.12
+      MemorySize: 512
+      Timeout: 180
+      Environment:
+        Variables:
+          REGION: !Ref Region
+      Handler: PythonLambda.SqsToTimeStreamPythonLambda.lambda_handler
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref S3Key

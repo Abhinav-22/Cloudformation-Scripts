@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  GreenGrassRegion:
+    Type: String
+    Description: AWS region of the greengrass core
+    AllowedValues:
+      - us-east-1
+      - us-east-2
+      - us-west-2
+    MinLength: 3
+
+  ThingName:
+    Type: String
+    MinLength: 3
+  ThingGroupName:
+    Type: String
+    MinLength: 3
+  KeyPair:
+    Type: String
+    MinLength: 1
+    Description: Create or use existing key pair for the EC2 instance (Make sure the key pair exist in the same region).
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      "HVM": "ami-080e1f13689e07408"
+    us-east-2:
+      "HVM": "ami-0b8b44ec9a8f90422"
+    us-west-2:
+      "HVM": "ami-08116b9957a259459"
+Resources:
+  EC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", "HVM"]
+      IamInstanceProfile: RoleName
+      InstanceType: t3a.medium
+      KeyName: !Ref KeyPair
+      SecurityGroupIds:
+        - SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Ref ThingName
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          sudo apt update -y
+          sudo apt upgrade -y
+          sudo apt-get install -y awscli
+          sudo apt install -y default-jdk
+          sudo apt install python3-pip -y
+          sudo apt install -y unzip
+          sudo unzip /home/ubuntu/greengrass-nucleus-latest.zip -d /home/ubuntu/GreengrassInstaller
+          sudo java -Droot="/greengrass/v2" -Dlog.store=FILE \
+          -jar /home/ubuntu/GreengrassInstaller/lib/Greengrass.jar \
+          --aws-region ${GreenGrassRegion} \
+          --thing-name ${ThingName} \
+          --thing-group-name ${ThingGroupName} \
+          --thing-policy-name GreengrassV2IoTThingPolicy \
+          --tes-role-name GreengrassV2TokenExchangeRole \
+          --tes-role-alias-name GreengrassV2TokenExchangeRoleAlias \
+          --component-default-user ggc_user:ggc_group \
+          --provision true \
+          --setup-system-service true \
+          --deploy-dev-tools true
+          sudo usermod -aG root ggc_user
+          sudo usermod -aG sudo ggc_user
+          sudo chmod -R 775 /greengrass/ 
+          sudo apt install python3.8-venv
+          sudo python3 -m venv /greengrass/virtualenv
+          sudo chmod -R 775 /greengrass/virtualenv
+          /greengrass/virtualenv/bin/python -m pip install awsiotsdk boto3

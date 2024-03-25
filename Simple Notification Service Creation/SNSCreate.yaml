@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: "2010-09-09" 
+Parameters:
+  EMail:
+    Type: String
+    MinLength: 3
+    Description: "Enter the email address in which notification is to be sent."
+  SnSName:
+    Type: String
+    MinLength: 3
+    Description: "Enter the Unique SnS Topic Name"
+Resources:
+  SNSCreate:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Ref SnSName
+      DisplayName: "SNS Trigger"
+      Subscription:
+        - Endpoint: !Ref EMail
+          Protocol: "email"
+  TopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Sid: AllowServices
+            Effect: Allow
+            Principal: 
+              AWS:
+               !Sub  'arn:aws:iam::${AWS::AccountId}:role/RoleName'
+            Action: "sns:Publish"
+            Resource:
+              - !Ref SNSCreate
+      Topics:
+        - !Ref SNSCreate
